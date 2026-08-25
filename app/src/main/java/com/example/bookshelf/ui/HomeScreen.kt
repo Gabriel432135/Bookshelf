@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -40,18 +41,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.bookshelf.R
+import com.example.bookshelf.model.Book
 import com.example.bookshelf.ui.theme.AppTheme
 import com.example.bookshelf.ui.theme.BookshelfTheme
 
-/**
- * Representação simples de um livro para o UI. 
- * Depois vamos usar a classe real que vier da API.
- */
-data class Book(
-    val id: String,
-    val title: String,
-    val thumbnailUrl: String
-)
+
 
 @Composable
 fun BookshelfApp(
@@ -155,8 +150,8 @@ fun BookCard(book: Book, modifier: Modifier = Modifier) {
                     .build(),
                 contentDescription = book.title,
                 contentScale = ContentScale.Crop,
-                error = rememberVectorPainter(Icons.Default.Warning),
-                placeholder = rememberVectorPainter(Icons.Default.Info),
+                error = painterResource(R.drawable.ic_broken_image),
+                placeholder = painterResource(R.drawable.loading_img),
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
