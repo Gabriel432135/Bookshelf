@@ -2,7 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Permissão necessária para o Retrofit acessar a API do Google Books -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
+        android:name=".BookshelfApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
