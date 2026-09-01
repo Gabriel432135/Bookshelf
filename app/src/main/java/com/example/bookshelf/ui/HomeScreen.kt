@@ -1,5 +1,7 @@
 package com.example.bookshelf.ui
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
@@ -16,18 +18,15 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -39,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.bookshelf.R
@@ -46,31 +46,14 @@ import com.example.bookshelf.model.Book
 import com.example.bookshelf.ui.theme.AppTheme
 import com.example.bookshelf.ui.theme.BookshelfTheme
 
-
-
 @Composable
 fun BookshelfApp(
     modifier: Modifier = Modifier
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-    val mockData = remember {
-        List(10) { Book("$it", "Livro de Teste $it", "") }
-    }
-
-    Scaffold(
-        topBar = {
-            BookshelfTopAppBar(
-                query = searchQuery,
-                onQueryChange = { searchQuery = it }
-            )
-        }
-    ) { p ->
-        HomeScreen(
-            books = mockData,
-            contentPadding = p,
-            modifier = modifier.fillMaxSize()
-        )
-    }
+    BookShelfNavHost(
+        navController = rememberNavController(),
+        modifier = modifier
+    )
 }
 
 @Composable
@@ -82,10 +65,10 @@ fun BookshelfTopAppBar(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(AppTheme.dimensions.paddingMedium),
+            .padding(AppTheme.dimensions.paddingLarge),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = AppTheme.dimensions.cardElevation,
-        shape = AppTheme.shape.extraLarge
+        shape = AppTheme.shape.large
     ) {
         TextField(
             value = query,
@@ -114,9 +97,44 @@ fun BookshelfTopAppBar(
 
 @Composable
 fun HomeScreen(
-    books: List<Book>,
+    uiState: HomeUiState, // Recebe o estado completo
+    onBookClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(AppTheme.dimensions.paddingSmall)
+) {
+    when (uiState) {
+        is HomeUiState.Loading -> {
+            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+        is HomeUiState.Success -> {
+            BooksGrid(
+                books = uiState.books,
+                onBookClick = onBookClick,
+                modifier = modifier,
+                contentPadding = contentPadding
+            )
+        }
+        is HomeUiState.Error -> {
+            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = "Erro: ${uiState.errorMessage}",
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(AppTheme.dimensions.paddingLarge)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun BooksGrid(
+    books: List<Book>,
+    onBookClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(AppTheme.dimensions.columnCount),
@@ -126,6 +144,7 @@ fun HomeScreen(
         items(items = books, key = { book -> book.id }) { book ->
             BookCard(
                 book = book,
+                onBookClick = onBookClick,
                 modifier = Modifier
                     .padding(AppTheme.dimensions.paddingSmall)
                     .fillMaxWidth()
@@ -136,9 +155,13 @@ fun HomeScreen(
 }
 
 @Composable
-fun BookCard(book: Book, modifier: Modifier = Modifier) {
+fun BookCard(
+    book: Book,
+    onBookClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
     Card(
-        modifier = modifier,
+        modifier = modifier.clickable { onBookClick(book.id) },
         elevation = CardDefaults.cardElevation(defaultElevation = AppTheme.dimensions.cardElevation),
         shape = AppTheme.shape.medium
     ) {

@@ -1,5 +1,6 @@
 package com.example.bookshelf.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,22 +13,23 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.StarHalf
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarHalf
 import androidx.compose.material.icons.filled.StarOutline
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -41,12 +43,42 @@ import com.example.bookshelf.model.BookDetail
 import com.example.bookshelf.ui.theme.AppTheme
 import com.example.bookshelf.ui.theme.BookshelfTheme
 
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookScreen(
-    book: BookDetail,
+    uiState: BookUiState,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Detalhes") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        when (uiState) {
+            is BookUiState.Loading -> LoadingScreen(modifier.padding(padding))
+            is BookUiState.Success -> BookDetailContent(
+                book = uiState.book,
+                modifier = modifier.padding(padding)
+            )
+
+            is BookUiState.Error -> ErrorScreen(
+                message = uiState.errorMessage,
+                modifier = modifier.padding(padding)
+            )
+        }
+    }
+}
+
+@Composable
+fun BookDetailContent(book: BookDetail, modifier: Modifier = Modifier) {
     val scrollState = rememberScrollState()
 
     Column(
@@ -55,7 +87,6 @@ fun BookScreen(
             .verticalScroll(scrollState)
             .padding(AppTheme.dimensions.paddingLarge)
     ) {
-        // 1. Capa do Livro
         AsyncImage(
             model = ImageRequest.Builder(context = LocalContext.current)
                 .data(book.thumbnailUrl.replace("http", "https"))
@@ -73,13 +104,12 @@ fun BookScreen(
 
         Spacer(modifier = Modifier.height(AppTheme.dimensions.paddingLarge))
 
-        // 2. Título e Autores
         Text(
             text = book.title,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
-        
+
         book.subtitle?.let {
             Text(
                 text = it,
@@ -98,77 +128,54 @@ fun BookScreen(
 
         Spacer(modifier = Modifier.height(AppTheme.dimensions.paddingMedium))
 
-        // 3. Avaliação (Estrelas)
         Row(verticalAlignment = Alignment.CenterVertically) {
             RatingStars(rating = book.averageRating)
             Spacer(modifier = Modifier.width(AppTheme.dimensions.paddingSmall))
             Text(
                 text = "(${book.ratingsCount} avaliações)",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline
+                style = MaterialTheme.typography.bodySmall
             )
         }
 
         Spacer(modifier = Modifier.height(AppTheme.dimensions.paddingLarge))
 
-        // 4. Resumo/Descrição
         Text(
             text = "Resumo",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
-        
         Spacer(modifier = Modifier.height(AppTheme.dimensions.paddingSmall))
-
-        Text(
-            text = book.description,
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Justify
-        )
+        Text(text = book.description, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
 @Composable
-fun RatingStars(
-    rating: Double,
-    modifier: Modifier = Modifier,
-    maxStars: Int = 5
-) {
+fun LoadingScreen(modifier: Modifier = Modifier) {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+fun ErrorScreen(message: String, modifier: Modifier = Modifier) {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(text = "Erro: $message", color = MaterialTheme.colorScheme.error)
+    }
+}
+
+@Composable
+fun RatingStars(rating: Double, modifier: Modifier = Modifier) {
     Row(modifier = modifier) {
-        repeat(maxStars) { index ->
-            val starIndex = index + 1
-            val icon = when {
-                rating >= starIndex -> Icons.Default.Star
-                rating >= starIndex - 0.5 -> Icons.AutoMirrored.Filled.StarHalf
-                else -> Icons.Default.StarOutline
-            }
+        repeat(5) { index ->
+            val icon = if (rating >= index + 1) Icons.Default.Star
+                else if (rating >= index + 0.5) Icons.Default.StarHalf
+                else Icons.Default.StarOutline
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Color(0xFFFFC107), // Cor dourada para as estrelas
+                tint = Color(0xFFFFC107),
                 modifier = Modifier.size(20.dp)
             )
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun BookScreenPreview() {
-    val mockBook = BookDetail(
-        id = "1",
-        title = "Kotlin in Action",
-        subtitle = "Segunda Edição",
-        authors = listOf("Dmitry Jemerov", "Svetlana Isakova"),
-        description = "Kotlin in Action ensina a usar a linguagem Kotlin para desenvolvimento de qualidade profissional. Escrito pelos próprios desenvolvedores da linguagem na JetBrains, este livro vai além da sintaxe e ensina como as características do Kotlin permitem que você escreva código limpo, seguro e expressivo.",
-        thumbnailUrl = "",
-        averageRating = 4.5,
-        ratingsCount = 120
-    )
-    
-    BookshelfTheme {
-        Scaffold { padding ->
-            BookScreen(book = mockBook, modifier = Modifier.padding(padding))
         }
     }
 }
