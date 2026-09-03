@@ -13,10 +13,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarHalf
 import androidx.compose.material.icons.filled.StarOutline
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -30,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -56,7 +59,7 @@ fun BookScreen(
                 title = { Text("Detalhes") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
                     }
                 }
             )
@@ -89,7 +92,7 @@ fun BookDetailContent(book: BookDetail, modifier: Modifier = Modifier) {
     ) {
         AsyncImage(
             model = ImageRequest.Builder(context = LocalContext.current)
-                .data(book.thumbnailUrl.replace("http", "https"))
+                .data(book.thumbnailUrl)
                 .crossfade(true)
                 .build(),
             contentDescription = book.title,
@@ -140,12 +143,15 @@ fun BookDetailContent(book: BookDetail, modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(AppTheme.dimensions.paddingLarge))
 
         Text(
-            text = "Resumo",
+            text = (if(book.description.isEmpty()) "Sem descrição" else "Descrição"),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(AppTheme.dimensions.paddingSmall))
-        Text(text = book.description, style = MaterialTheme.typography.bodyMedium)
+
+        Text(
+            text = book.description.replace(Regex("<[^>]*>"), ""),
+            style = MaterialTheme.typography.bodyMedium)
     }
 }
 

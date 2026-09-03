@@ -36,13 +36,14 @@ fun BookShelfNavHost(
         composable<Routes.Home> {
             val homeViewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory)
             val uiState by homeViewModel.uistate.collectAsState()
+            val queryState by homeViewModel.query.collectAsState()
 
             Scaffold(
                 topBar = {
                     BookshelfTopAppBar(
-                        query = "kotlin",
+                        query = queryState,
                         onQueryChange = {query ->
-                            homeViewModel.getBooks(query)
+                            homeViewModel.updateQuery(query)
                         }
                     )
                 }

@@ -97,7 +97,7 @@ fun BookshelfTopAppBar(
 
 @Composable
 fun HomeScreen(
-    uiState: HomeUiState, // Recebe o estado completo
+    uiState: HomeUiState,
     onBookClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(AppTheme.dimensions.paddingSmall)
@@ -168,7 +168,7 @@ fun BookCard(
         Column {
             AsyncImage(
                 model = ImageRequest.Builder(context = LocalContext.current)
-                    .data(book.thumbnailUrl.replace("http", "https"))
+                    .data(book.thumbnailUrl) // REMOVIDO o replace problemático aqui!
                     .crossfade(true)
                     .build(),
                 contentDescription = book.title,

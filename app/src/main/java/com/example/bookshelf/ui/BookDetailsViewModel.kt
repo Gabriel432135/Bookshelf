@@ -37,6 +37,11 @@ class BookDetailsViewModel(private val bookshelfRepository: AppRepository) : Vie
 
 
     fun getBook(id: String) {
+        if (_uiState.value is BookUiState.Success &&
+            (_uiState.value as BookUiState.Success).book.id == id) {
+            return
+        }
+
         viewModelScope.launch {
             _uiState.value = BookUiState.Loading
             try {
