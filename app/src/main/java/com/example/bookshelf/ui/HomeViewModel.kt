@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import java.io.IOException
+import kotlin.text.replace
 import kotlin.time.Duration.Companion.milliseconds
 
 sealed interface HomeUiState{
@@ -49,7 +50,11 @@ class HomeViewModel(private var bookshelfRepository: AppRepository) : ViewModel(
         viewModelScope.launch {
             _query
                 .debounce(500.milliseconds)
-                .filter{query -> query.length >= 3}
+                .filter{query ->
+                    query.trim()
+                        .replace(Regex("[!@#\$%^&*()?]"), "")
+                        .isNotEmpty()
+                }
                 .distinctUntilChanged()
                 .collect {
                     getBooks(it)

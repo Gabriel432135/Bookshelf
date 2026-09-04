@@ -1,5 +1,6 @@
 package com.example.bookshelf.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
@@ -35,11 +37,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.rememberNavController
-import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.example.bookshelf.R
 import com.example.bookshelf.model.Book
@@ -165,25 +168,57 @@ fun BookCard(
         elevation = CardDefaults.cardElevation(defaultElevation = AppTheme.dimensions.cardElevation),
         shape = AppTheme.shape.medium
     ) {
-        Column {
-            AsyncImage(
+        Box(modifier = Modifier.fillMaxSize()) {
+            SubcomposeAsyncImage(
                 model = ImageRequest.Builder(context = LocalContext.current)
-                    .data(book.thumbnailUrl) // REMOVIDO o replace problemático aqui!
+                    .data(book.thumbnailUrl)
                     .crossfade(true)
                     .build(),
                 contentDescription = book.title,
                 contentScale = ContentScale.Crop,
-                error = painterResource(R.drawable.ic_broken_image),
-                placeholder = painterResource(R.drawable.loading_img),
-                modifier = Modifier.fillMaxWidth()
+                loading = {
+                    // O Brilho do Shimmer
+                    Box(modifier = Modifier.fillMaxSize().shimmerEffect())
+                },
+                error = {
+                    // Caso a imagem falhe (ex: link quebrado)
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_broken_image),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
             )
-            Text(
-                text = book.title,
-                style = MaterialTheme.typography.titleSmall,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(AppTheme.dimensions.paddingMedium),
-                maxLines = 2
-            )
+
+            // Gradiente na base para o texto ficar legível
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f)),
+                            startY = 0f
+                        )
+                    )
+                    .padding(AppTheme.dimensions.paddingSmall)
+            ) {
+                Text(
+                    text = book.title?.takeUnless { it.isBlank() } ?: "Sem título",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(AppTheme.dimensions.paddingSmall)
+                )
+            }
         }
     }
 }
@@ -192,6 +227,12 @@ fun BookCard(
 @Composable
 fun HomeScreenPreview() {
     BookshelfTheme {
-        BookshelfApp()
+        BooksGrid(
+            books = listOf(
+                Book("1", "Book 1", "https://example.com/book1.jpg"),
+                Book("2", "Book 2", "https://example.com/book2.jpg"),
+            ),
+            onBookClick = {}
+        )
     }
 }

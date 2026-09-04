@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.example.bookshelf.R
 import com.example.bookshelf.model.BookDetail
@@ -90,68 +91,101 @@ fun BookDetailContent(book: BookDetail, modifier: Modifier = Modifier) {
             .verticalScroll(scrollState)
             .padding(AppTheme.dimensions.paddingLarge)
     ) {
-        AsyncImage(
+
+        SubcomposeAsyncImage(
             model = ImageRequest.Builder(context = LocalContext.current)
                 .data(book.thumbnailUrl)
                 .crossfade(true)
                 .build(),
+            loading = {
+                // O Brilho do Shimmer
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .fillMaxWidth()
+                        .height(300.dp)
+                        .clip(AppTheme.shape.large)
+                        .shimmerEffect()
+                )
+            },
             contentDescription = book.title,
-            error = painterResource(R.drawable.ic_broken_image),
-            placeholder = painterResource(R.drawable.loading_img),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(300.dp)
-                .clip(AppTheme.shape.large),
-            contentScale = ContentScale.Fit
+            error = {
+                // Caso a imagem falhe (ex: link quebrado)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .fillMaxWidth()
+                        .height(300.dp)
+                        .clip(AppTheme.shape.large),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_broken_image),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            },
+            modifier = Modifier.fillMaxSize()
         )
 
         Spacer(modifier = Modifier.height(AppTheme.dimensions.paddingLarge))
 
+        // Título: Trata Nulo E Branco
         Text(
-            text = book.title,
+            text = book.title?.takeUnless { it.isBlank() } ?: "Sem título",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
 
-        book.subtitle?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.secondary
-            )
-        }
+        // Subtítulo: Trata Nulo E Branco
+        Text(
+            text = book.subtitle?.takeUnless { it.isBlank() } ?: "Sem subtítulo",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.secondary
+        )
+
 
         Spacer(modifier = Modifier.height(AppTheme.dimensions.paddingSmall))
 
+        // Autores: Trata Nulo E Branco
         Text(
-            text = book.authors.joinToString(", "),
+            text = book.authors?.filter { it.isNotBlank() }?.joinToString(", ")
+                ?.takeUnless { it.isBlank() }
+                ?: "Sem informação sobre os autores",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.primary
         )
 
         Spacer(modifier = Modifier.height(AppTheme.dimensions.paddingMedium))
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RatingStars(rating = book.averageRating)
-            Spacer(modifier = Modifier.width(AppTheme.dimensions.paddingSmall))
-            Text(
-                text = "(${book.ratingsCount} avaliações)",
-                style = MaterialTheme.typography.bodySmall
-            )
+        book.averageRating?.let { average ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RatingStars(rating = average)
+                Spacer(modifier = Modifier.width(AppTheme.dimensions.paddingSmall))
+                Text(
+                    text = "(${book.ratingsCount ?: 0} avaliações)",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(AppTheme.dimensions.paddingLarge))
 
         Text(
-            text = (if(book.description.isEmpty()) "Sem descrição" else "Descrição"),
+            text = if (book.description.isNullOrBlank()) "Sem descrição" else "Descrição",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(AppTheme.dimensions.paddingSmall))
 
-        Text(
-            text = book.description.replace(Regex("<[^>]*>"), ""),
-            style = MaterialTheme.typography.bodyMedium)
+        book.description?.takeUnless { it.isBlank() }?.let { desc ->
+            Text(
+                text = desc.replace(Regex("<[^>]*>"), ""),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
     }
 }
 
@@ -174,8 +208,8 @@ fun RatingStars(rating: Double, modifier: Modifier = Modifier) {
     Row(modifier = modifier) {
         repeat(5) { index ->
             val icon = if (rating >= index + 1) Icons.Default.Star
-                else if (rating >= index + 0.5) Icons.Default.StarHalf
-                else Icons.Default.StarOutline
+            else if (rating >= index + 0.5) Icons.Default.StarHalf
+            else Icons.Default.StarOutline
             Icon(
                 imageVector = icon,
                 contentDescription = null,

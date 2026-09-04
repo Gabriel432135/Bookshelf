@@ -15,7 +15,7 @@ data class BookDto(
 
 @Serializable
 data class VolumeInfo(
-    val title: String,
+    val title: String? = null,
     val subtitle: String? = null,
     val authors: List<String>? = null,
     val description: String? = null,

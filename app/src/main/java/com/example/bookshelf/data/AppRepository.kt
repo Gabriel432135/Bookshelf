@@ -14,13 +14,15 @@ class DefaultAppRepository(
 ) : AppRepository {
 
     override suspend fun getBooks(query: String): List<Book> {
-        val response = bookshelfApiService.searchBooks(query)
+        val sanitizedQuery = sanitizeQuery(query)
+        val response = bookshelfApiService.searchBooks(sanitizedQuery)
         return response.items?.map { dto ->
             Book(
                 id = dto.id,
                 title = dto.volumeInfo.title,
                 // Truque: Força o HTTPS e tenta aumentar o zoom de 1 para 2 na lista
-                thumbnailUrl = dto.volumeInfo.imageLinks?.thumbnail?.toHttps()?.toHighRes() ?: ""
+                thumbnailUrl = dto.volumeInfo.imageLinks?.thumbnail?.toHttps()?.toHighRes()
+                    ?: "" //apenas a imagem é tratada no rep, para garantir a tela de erro do coil
             )
         } ?: emptyList()
     }
@@ -35,17 +37,18 @@ class DefaultAppRepository(
             ?: imageLinks?.medium 
             ?: imageLinks?.small 
             ?: imageLinks?.thumbnail?.toHighRes() // Se não tiver nenhuma, faz o "zoom" na pequena
-            ?: ""
+            ?: "" //apenas a imagem é tratada no rep, para garantir a tela de erro do coil
+
 
         return BookDetail(
             id = dto.id,
             title = dto.volumeInfo.title,
             subtitle = dto.volumeInfo.subtitle,
-            authors = dto.volumeInfo.authors ?: emptyList(),
-            description = dto.volumeInfo.description ?: "",
+            authors = dto.volumeInfo.authors,
+            description = dto.volumeInfo.description,
             thumbnailUrl = bestImage.toHttps(),
-            averageRating = dto.volumeInfo.averageRating ?: 0.0,
-            ratingsCount = dto.volumeInfo.ratingsCount ?: 0
+            averageRating = dto.volumeInfo.averageRating,
+            ratingsCount = dto.volumeInfo.ratingsCount
         )
     }
 
@@ -59,4 +62,12 @@ class DefaultAppRepository(
     private fun String.toHttps(): String {
         return this.replace("http:", "https:")
     }
+
+    private fun sanitizeQuery(query: String): String {
+        return java.text.Normalizer.normalize(query, java.text.Normalizer.Form.NFD)
+            .replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "") // Remove os acentos
+            .replace(Regex("[^a-zA-Z0-9 ]"), "") // Remove símbolos especiais (deixa só letras, números e espaços)
+            .trim() // Remove espaços inúteis no início e fim
+    }
+
 }
