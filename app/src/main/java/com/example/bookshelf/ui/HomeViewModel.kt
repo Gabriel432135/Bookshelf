@@ -17,18 +17,21 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import java.io.IOException
-import kotlin.text.replace
 import kotlin.time.Duration.Companion.milliseconds
 
-sealed interface HomeUiState{
-    data class Success(val books: List<Book>) : HomeUiState
+sealed interface HomeUiState {
+    data class Success(
+        val books: List<Book>,
+        val isPaginating: Boolean = false // Novo campo para o carregamento no final da lista
+    ) : HomeUiState
     data class Error(val errorMessage: String) : HomeUiState
     object Loading : HomeUiState
 }
-@OptIn(FlowPreview::class)
-class HomeViewModel(private var bookshelfRepository: AppRepository) : ViewModel(){
 
-    companion object{
+@OptIn(FlowPreview::class)
+class HomeViewModel(private var bookshelfRepository: AppRepository) : ViewModel() {
+
+    companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val application = (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as BookshelfApplication)
@@ -41,45 +44,64 @@ class HomeViewModel(private var bookshelfRepository: AppRepository) : ViewModel(
     private val _uistate: MutableStateFlow<HomeUiState> = MutableStateFlow(HomeUiState.Loading)
     val uistate: StateFlow<HomeUiState> = _uistate.asStateFlow()
 
-    //Estado da pesquisa atual
     private val _query = MutableStateFlow("kotlin")
-    val query =  _query.asStateFlow()
+    val query = _query.asStateFlow()
 
+    private var currentStartIndex = 0
+    private val allBooks = mutableListOf<Book>()
+    private var isEndReached = false
 
-    init{
+    init {
         viewModelScope.launch {
             _query
                 .debounce(500.milliseconds)
-                .filter{query ->
-                    query.trim()
-                        .replace(Regex("[!@#\$%^&*()?]"), "")
-                        .isNotEmpty()
-                }
+                .filter { it.trim().replace(Regex("[!@#\$%^&*()?]"), "").isNotEmpty() }
                 .distinctUntilChanged()
                 .collect {
-                    getBooks(it)
+                    isEndReached = false
+                    getBooks(it, false)
                 }
         }
-
     }
 
     fun updateQuery(newQuery: String) {
         _query.value = newQuery
     }
 
-    private fun getBooks(query: String){
+    private fun getBooks(query: String, isNextPage: Boolean) {
         viewModelScope.launch {
-            _uistate.value = HomeUiState.Loading
-            try{
-                val booksList = bookshelfRepository.getBooks(query)
-                _uistate.value = HomeUiState.Success(booksList)
-            }catch (e: IOException){
-                _uistate.value = HomeUiState.Error(e.message ?: "IO error")
-            }catch (e: Exception){
-                _uistate.value = HomeUiState.Error(e.message ?: "Unknown error")
+            if (!isNextPage) {
+                currentStartIndex = 0
+                allBooks.clear()
+                _uistate.value = HomeUiState.Loading
+            } else {
+                // Se for próxima página, avisa a UI que estamos paginando
+                _uistate.value = HomeUiState.Success(allBooks.toList(), isPaginating = true)
+            }
+
+            try {
+                val novosLivros = bookshelfRepository.getBooks(query, currentStartIndex, 20)
+                
+                if (novosLivros.isEmpty()) {
+                    isEndReached = true
+                }
+                
+                allBooks.addAll(novosLivros)
+                _uistate.value = HomeUiState.Success(allBooks.toList(), isPaginating = false)
+            } catch (e: IOException) {
+                _uistate.value = HomeUiState.Error("Erro de conexão")
+            } catch (e: Exception) {
+                _uistate.value = HomeUiState.Error(e.message ?: "Erro desconhecido")
             }
         }
     }
 
-
+    fun fetchNextPage() {
+        // Evita chamadas se já estivermos carregando, se chegamos no fim ou se deu erro
+        val currentState = _uistate.value
+        if (currentState is HomeUiState.Success && !currentState.isPaginating && !isEndReached) {
+            currentStartIndex += 20
+            getBooks(_query.value, true)
+        }
+    }
 }

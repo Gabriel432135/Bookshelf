@@ -14,7 +14,7 @@ interface AppContainer {
 
 class DefaultAppContainer : AppContainer {
     private val baseUrl = "https://www.googleapis.com/books/v1/"
-    val apiKey = BuildConfig.GOOGLE_BOOKS_API_KEY
+    private val apiKey = BuildConfig.GOOGLE_BOOKS_API_KEY
 
     //Cliente HTTP para adicionar a chave de API ao cabeçalho da solicitação
     private val okHttpClient = OkHttpClient.Builder()

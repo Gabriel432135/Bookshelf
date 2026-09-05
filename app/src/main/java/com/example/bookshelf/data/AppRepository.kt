@@ -5,7 +5,7 @@ import com.example.bookshelf.model.BookDetail
 import com.example.bookshelf.network.BookshelfApiService
 
 interface AppRepository {
-    suspend fun getBooks(query: String = "jazz"): List<Book>
+    suspend fun getBooks(query: String, startIndex: Int, maxResults: Int): List<Book>
     suspend fun getBook(id: String): BookDetail
 }
 
@@ -13,16 +13,18 @@ class DefaultAppRepository(
     private val bookshelfApiService: BookshelfApiService
 ) : AppRepository {
 
-    override suspend fun getBooks(query: String): List<Book> {
+    override suspend fun getBooks(query: String, startIndex: Int, maxResults: Int): List<Book> {
         val sanitizedQuery = sanitizeQuery(query)
-        val response = bookshelfApiService.searchBooks(sanitizedQuery)
+        val response = bookshelfApiService.searchBooks(
+            query = sanitizedQuery,
+            startIndex = startIndex,
+            maxResults = maxResults
+        )
         return response.items?.map { dto ->
             Book(
                 id = dto.id,
                 title = dto.volumeInfo.title,
-                // Truque: Força o HTTPS e tenta aumentar o zoom de 1 para 2 na lista
-                thumbnailUrl = dto.volumeInfo.imageLinks?.thumbnail?.toHttps()?.toHighRes()
-                    ?: "" //apenas a imagem é tratada no rep, para garantir a tela de erro do coil
+                thumbnailUrl = dto.volumeInfo.imageLinks?.thumbnail?.toHttps()?.toHighRes() ?: ""
             )
         } ?: emptyList()
     }
@@ -31,13 +33,12 @@ class DefaultAppRepository(
         val dto = bookshelfApiService.getBook(id)
         val imageLinks = dto.volumeInfo.imageLinks
         
-        // Tenta pegar a maior imagem disponível em ordem decrescente
         val bestImage = imageLinks?.extraLarge 
             ?: imageLinks?.large 
             ?: imageLinks?.medium 
             ?: imageLinks?.small 
-            ?: imageLinks?.thumbnail?.toHighRes() // Se não tiver nenhuma, faz o "zoom" na pequena
-            ?: "" //apenas a imagem é tratada no rep, para garantir a tela de erro do coil
+            ?: imageLinks?.thumbnail?.toHighRes() 
+            ?: ""
 
 
         return BookDetail(
@@ -52,11 +53,8 @@ class DefaultAppRepository(
         )
     }
 
-    /**
-     * Função de extensão interna para melhorar a qualidade da imagem do Google Books.
-     */
     private fun String.toHighRes(): String {
-        return this.replace("zoom=1", "zoom=2") // Aumenta a resolução
+        return this.replace("zoom=1", "zoom=2")
     }
 
     private fun String.toHttps(): String {
@@ -65,9 +63,8 @@ class DefaultAppRepository(
 
     private fun sanitizeQuery(query: String): String {
         return java.text.Normalizer.normalize(query, java.text.Normalizer.Form.NFD)
-            .replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "") // Remove os acentos
-            .replace(Regex("[^a-zA-Z0-9 ]"), "") // Remove símbolos especiais (deixa só letras, números e espaços)
-            .trim() // Remove espaços inúteis no início e fim
+            .replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "")
+            .replace(Regex("[^a-zA-Z0-9 ]"), "")
+            .trim()
     }
-
 }

@@ -1,6 +1,5 @@
 package com.example.bookshelf.ui
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -14,6 +13,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import kotlinx.serialization.Serializable
 
+/**
+ * Definição das rotas do App de forma Type-Safe.
+ */
 sealed interface Routes {
     @Serializable
     data object Home : Routes
@@ -32,33 +34,32 @@ fun BookShelfNavHost(
         startDestination = Routes.Home,
         modifier = modifier
     ) {
-        // Tela 1: Home
+        // Cena 1: Home
         composable<Routes.Home> {
             val homeViewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory)
             val uiState by homeViewModel.uistate.collectAsState()
-            val queryState by homeViewModel.query.collectAsState()
+            val query by homeViewModel.query.collectAsState()
 
             Scaffold(
                 topBar = {
                     BookshelfTopAppBar(
-                        query = queryState,
-                        onQueryChange = {query ->
-                            homeViewModel.updateQuery(query)
-                        }
+                        query = query,
+                        onQueryChange = { homeViewModel.updateQuery(it) }
                     )
                 }
             ) { padding ->
                 HomeScreen(
-                    onBookClick = { id ->
-                        navController.navigate(Routes.Detail(bookId = id))
-                    },
-                    contentPadding = padding,
                     uiState = uiState,
+                    onBookClick = { id -> 
+                        navController.navigate(Routes.Detail(bookId = id)) 
+                    },
+                    onLoadNextPage = { homeViewModel.fetchNextPage() }, // CONECTADO!
+                    contentPadding = padding
                 )
             }
         }
 
-        // Tela 2: Detalhes
+        // Cena 2: Detalhes
         composable<Routes.Detail> { backStackEntry ->
             val detailRoute: Routes.Detail = backStackEntry.toRoute()
             

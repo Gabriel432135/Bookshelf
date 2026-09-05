@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
@@ -27,6 +29,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -102,6 +108,7 @@ fun BookshelfTopAppBar(
 fun HomeScreen(
     uiState: HomeUiState,
     onBookClick: (String) -> Unit,
+    onLoadNextPage: () -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(AppTheme.dimensions.paddingSmall)
 ) {
@@ -114,7 +121,9 @@ fun HomeScreen(
         is HomeUiState.Success -> {
             BooksGrid(
                 books = uiState.books,
+                isPaginating = uiState.isPaginating,
                 onBookClick = onBookClick,
+                onLoadNextPage = onLoadNextPage,
                 modifier = modifier,
                 contentPadding = contentPadding
             )
@@ -135,16 +144,40 @@ fun HomeScreen(
 @Composable
 fun BooksGrid(
     books: List<Book>,
+    isPaginating: Boolean,
     onBookClick: (String) -> Unit,
+    onLoadNextPage: () -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
+    val gridState = rememberLazyGridState()
+
+    // CORREÇÃO: O vigia agora observa o gridState e o total de itens.
+    // Ele dispara o gatilho quando o último item visível está entre os 5 últimos da lista.
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val totalItems = gridState.layoutInfo.totalItemsCount
+            val lastVisibleItem = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            
+            // Gatilho: Se o usuário passou de 80% da lista atual, pede a próxima
+            totalItems > 0 && lastVisibleItem >= totalItems - 5
+        }
+    }
+
+    // Toda vez que o 'shouldLoadMore' mudar para TRUE, tentamos carregar
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore && !isPaginating) {
+            onLoadNextPage()
+        }
+    }
+
     LazyVerticalGrid(
+        state = gridState,
         columns = GridCells.Fixed(AppTheme.dimensions.columnCount),
         modifier = modifier.padding(horizontal = AppTheme.dimensions.paddingSmall),
         contentPadding = contentPadding,
     ) {
-        items(items = books, key = { book -> book.id }) { book ->
+        itemsIndexed(items = books, key = { index, book -> "${book.id}_$index" }) { _, book ->
             BookCard(
                 book = book,
                 onBookClick = onBookClick,
@@ -153,6 +186,19 @@ fun BooksGrid(
                     .fillMaxWidth()
                     .aspectRatio(0.7f)
             )
+        }
+
+        if (isPaginating) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(AppTheme.dimensions.paddingMedium),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                }
+            }
         }
     }
 }
@@ -164,7 +210,7 @@ fun BookCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.clickable { onBookClick(book.id) },
+        modifier = modifier.clickable { book.id?.let { onBookClick(it) } },
         elevation = CardDefaults.cardElevation(defaultElevation = AppTheme.dimensions.cardElevation),
         shape = AppTheme.shape.medium
     ) {
@@ -177,24 +223,20 @@ fun BookCard(
                 contentDescription = book.title,
                 contentScale = ContentScale.Crop,
                 loading = {
-                    // O Brilho do Shimmer
                     Box(modifier = Modifier.fillMaxSize().shimmerEffect())
                 },
                 error = {
-                    // Caso a imagem falhe (ex: link quebrado)
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_broken_image),
+                            painter = rememberVectorPainter(Icons.Default.Warning),
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.fillMaxSize()
+                            tint = MaterialTheme.colorScheme.error
                         )
                     }
                 },
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Gradiente na base para o texto ficar legível
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -232,7 +274,9 @@ fun HomeScreenPreview() {
                 Book("1", "Book 1", "https://example.com/book1.jpg"),
                 Book("2", "Book 2", "https://example.com/book2.jpg"),
             ),
-            onBookClick = {}
+            isPaginating = true,
+            onBookClick = {},
+            onLoadNextPage = {}
         )
     }
 }
