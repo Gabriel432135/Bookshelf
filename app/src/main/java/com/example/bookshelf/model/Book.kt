@@ -1,9 +1,12 @@
 package com.example.bookshelf.model
 
+import androidx.compose.runtime.Immutable
+
 /**
  * Representação simples de um livro para o UI.
- * Depois vamos usar a classe real que vier da API.
+ * Marcada como @Immutable para otimizar a recomposição em listas.
  */
+@Immutable
 data class Book(
     val id: String,
     val title: String?,

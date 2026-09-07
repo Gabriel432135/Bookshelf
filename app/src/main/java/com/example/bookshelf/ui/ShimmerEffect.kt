@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.IntSize
  * Versão OTÍMIZADA do Shimmer.
  * Usa drawBehind para evitar recomposições desnecessárias.
  */
-fun Modifier.shimmerEffect(): Modifier = composed {
+fun Modifier.shimmerEffect(color: Color, colorWeen: Color): Modifier = composed {
     var size by remember { mutableStateOf(IntSize.Zero) }
     val transition = rememberInfiniteTransition(label = "shimmer")
     
@@ -42,9 +42,9 @@ fun Modifier.shimmerEffect(): Modifier = composed {
             drawRect(
                 brush = Brush.linearGradient(
                     colors = listOf(
-                        Color(0xFFEBEBEB),
-                        Color(0xFFD3D3D3),
-                        Color(0xFFEBEBEB),
+                        color,
+                        colorWeen,
+                        color,
                     ),
                     start = Offset(startOffsetX, 0f),
                     end = Offset(startOffsetX + size.width.toFloat(), size.height.toFloat())

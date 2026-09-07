@@ -21,27 +21,27 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 data class AppDimensions(
-    val paddingSmall: Dp = 4.dp, val paddingMedium: Dp = 8.dp,
-    val paddingLarge: Dp = 16.dp,
+    val paddingSmall: Dp = 2.dp, // Reduzido de 4dp
+    val paddingMedium: Dp = 6.dp, // Reduzido de 8dp
+    val paddingLarge: Dp = 12.dp, // Reduzido de 16dp
     val cardElevation: Dp = 2.dp,
     val imageHeight: Dp = 200.dp,
-    val columnCount: Int = 1 // Valor padrão é 1 (celular)
+    val columnCount: Int = 1 
 )
 
 val LocalAppDimensions = staticCompositionLocalOf { AppDimensions() }
 
 data class AppShape(
-    val small: Shape = RoundedCornerShape(4.dp),
-    val medium: Shape = RoundedCornerShape(8.dp),
-    val large: Shape = RoundedCornerShape(16.dp),
-    val extraLarge: Shape = RoundedCornerShape(32.dp),
+    val small: Shape = RoundedCornerShape(2.dp), // Mais quadrado
+    val medium: Shape = RoundedCornerShape(4.dp), // Mais quadrado (usado nos cards)
+    val large: Shape = RoundedCornerShape(8.dp),
+    val extraLarge: Shape = RoundedCornerShape(24.dp),
 
-    val smallHalf: Shape = RoundedCornerShape(bottomStart = 4.dp, bottomEnd = 4.dp),
-    val mediumHalf: Shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp),
-    val largeHalf: Shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
-    val extraLargeHalf: Shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp),
-
-    )
+    val smallHalf: Shape = RoundedCornerShape(bottomStart = 2.dp, bottomEnd = 2.dp),
+    val mediumHalf: Shape = RoundedCornerShape(bottomStart = 4.dp, bottomEnd = 4.dp),
+    val largeHalf: Shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp),
+    val extraLargeHalf: Shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+)
 
 val LocalAppShape = staticCompositionLocalOf { AppShape() }
 

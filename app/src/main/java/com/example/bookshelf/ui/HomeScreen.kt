@@ -1,13 +1,22 @@
 package com.example.bookshelf.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -18,6 +27,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -75,9 +85,9 @@ fun BookshelfTopAppBar(
         modifier = modifier
             .fillMaxWidth()
             .padding(AppTheme.dimensions.paddingLarge),
-        color = MaterialTheme.colorScheme.surface,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
         tonalElevation = AppTheme.dimensions.cardElevation,
-        shape = AppTheme.shape.large
+        shape = AppTheme.shape.extraLarge
     ) {
         TextField(
             value = query,
@@ -109,12 +119,14 @@ fun HomeScreen(
     uiState: HomeUiState,
     onBookClick: (String) -> Unit,
     onLoadNextPage: () -> Unit,
-    modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(AppTheme.dimensions.paddingSmall)
 ) {
     when (uiState) {
+        is HomeUiState.Empty -> {
+            EmptySearchScreen(modifier = Modifier.padding(contentPadding))
+        }
         is HomeUiState.Loading -> {
-            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         }
@@ -124,12 +136,11 @@ fun HomeScreen(
                 isPaginating = uiState.isPaginating,
                 onBookClick = onBookClick,
                 onLoadNextPage = onLoadNextPage,
-                modifier = modifier,
                 contentPadding = contentPadding
             )
         }
         is HomeUiState.Error -> {
-            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
                     text = "Erro: ${uiState.errorMessage}",
                     color = MaterialTheme.colorScheme.error,
@@ -138,6 +149,29 @@ fun HomeScreen(
                 )
             }
         }
+    }
+
+}
+
+@Composable
+fun EmptySearchScreen(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Default.Search,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.outline
+        )
+        Spacer(modifier = Modifier.size(16.dp))
+        Text(
+            text = "Digite algo para pesquisar!",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.outline
+        )
     }
 }
 
@@ -152,19 +186,14 @@ fun BooksGrid(
 ) {
     val gridState = rememberLazyGridState()
 
-    // CORREÇÃO: O vigia agora observa o gridState e o total de itens.
-    // Ele dispara o gatilho quando o último item visível está entre os 5 últimos da lista.
     val shouldLoadMore by remember {
         derivedStateOf {
             val totalItems = gridState.layoutInfo.totalItemsCount
             val lastVisibleItem = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            
-            // Gatilho: Se o usuário passou de 80% da lista atual, pede a próxima
             totalItems > 0 && lastVisibleItem >= totalItems - 5
         }
     }
 
-    // Toda vez que o 'shouldLoadMore' mudar para TRUE, tentamos carregar
     LaunchedEffect(shouldLoadMore) {
         if (shouldLoadMore && !isPaginating) {
             onLoadNextPage()
@@ -185,15 +214,22 @@ fun BooksGrid(
                     .padding(AppTheme.dimensions.paddingSmall)
                     .fillMaxWidth()
                     .aspectRatio(0.7f)
+                    .animateItem(
+                        fadeInSpec = tween(700),
+                        placementSpec = tween(500)
+                    )
             )
         }
-
-        if (isPaginating) {
+        if(isPaginating) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(AppTheme.dimensions.paddingMedium),
+                        .animateItem(
+                            fadeInSpec = tween(700),
+                            fadeOutSpec = tween(500),
+                            placementSpec = tween(500)
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(32.dp))
@@ -223,7 +259,12 @@ fun BookCard(
                 contentDescription = book.title,
                 contentScale = ContentScale.Crop,
                 loading = {
-                    Box(modifier = Modifier.fillMaxSize().shimmerEffect())
+                    Box(modifier = Modifier.fillMaxSize()
+                        .shimmerEffect(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            colorWeen = MaterialTheme.colorScheme.surfaceBright
+                        )
+                    )
                 },
                 error = {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -269,12 +310,8 @@ fun BookCard(
 @Composable
 fun HomeScreenPreview() {
     BookshelfTheme {
-        BooksGrid(
-            books = listOf(
-                Book("1", "Book 1", "https://example.com/book1.jpg"),
-                Book("2", "Book 2", "https://example.com/book2.jpg"),
-            ),
-            isPaginating = true,
+        HomeScreen(
+            uiState = HomeUiState.Empty,
             onBookClick = {},
             onLoadNextPage = {}
         )

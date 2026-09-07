@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -29,6 +30,15 @@ fun BookShelfNavHost(
     navController: NavHostController,
     modifier: Modifier = Modifier
 ) {
+    // OTİMIZAÇÃO: Estabilizamos as lambdas de navegação para evitar recomposições inúteis na lista
+    val onBookClick: (String) -> Unit = remember(navController) {
+        { id -> navController.navigate(Routes.Detail(bookId = id)) }
+    }
+    
+    val onBack: () -> Unit = remember(navController) {
+        { navController.popBackStack() }
+    }
+
     NavHost(
         navController = navController,
         startDestination = Routes.Home,
@@ -50,10 +60,8 @@ fun BookShelfNavHost(
             ) { padding ->
                 HomeScreen(
                     uiState = uiState,
-                    onBookClick = { id -> 
-                        navController.navigate(Routes.Detail(bookId = id)) 
-                    },
-                    onLoadNextPage = { homeViewModel.fetchNextPage() }, // CONECTADO!
+                    onBookClick = onBookClick, // Lambda estável
+                    onLoadNextPage = { homeViewModel.fetchNextPage() },
                     contentPadding = padding
                 )
             }
@@ -72,7 +80,7 @@ fun BookShelfNavHost(
 
             BookScreen(
                 uiState = uiState,
-                onBack = { navController.popBackStack() }
+                onBack = onBack // Lambda estável
             )
         }
     }

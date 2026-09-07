@@ -105,7 +105,8 @@ fun BookDetailContent(book: BookDetail, modifier: Modifier = Modifier) {
                         .fillMaxWidth()
                         .height(300.dp)
                         .clip(AppTheme.shape.large)
-                        .shimmerEffect()
+                        .shimmerEffect(color = MaterialTheme.colorScheme.surfaceVariant,
+                            colorWeen = MaterialTheme.colorScheme.surfaceBright)
                 )
             },
             contentDescription = book.title,

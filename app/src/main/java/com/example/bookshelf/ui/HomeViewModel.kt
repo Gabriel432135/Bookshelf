@@ -22,11 +22,13 @@ import kotlin.time.Duration.Companion.milliseconds
 sealed interface HomeUiState {
     data class Success(
         val books: List<Book>,
-        val isPaginating: Boolean = false // Novo campo para o carregamento no final da lista
+        val isPaginating: Boolean = false
     ) : HomeUiState
     data class Error(val errorMessage: String) : HomeUiState
     object Loading : HomeUiState
+    object Empty : HomeUiState // Novo estado para quando não há pesquisa
 }
+
 
 @OptIn(FlowPreview::class)
 class HomeViewModel(private var bookshelfRepository: AppRepository) : ViewModel() {
@@ -41,10 +43,12 @@ class HomeViewModel(private var bookshelfRepository: AppRepository) : ViewModel(
         }
     }
 
-    private val _uistate: MutableStateFlow<HomeUiState> = MutableStateFlow(HomeUiState.Loading)
+    // Iniciamos no estado Empty agora
+    private val _uistate: MutableStateFlow<HomeUiState> = MutableStateFlow(HomeUiState.Empty)
     val uistate: StateFlow<HomeUiState> = _uistate.asStateFlow()
 
-    private val _query = MutableStateFlow("kotlin")
+    // Query inicia vazia
+    private val _query = MutableStateFlow("")
     val query = _query.asStateFlow()
 
     private var currentStartIndex = 0
@@ -55,7 +59,10 @@ class HomeViewModel(private var bookshelfRepository: AppRepository) : ViewModel(
         viewModelScope.launch {
             _query
                 .debounce(500.milliseconds)
-                .filter { it.trim().replace(Regex("[!@#\$%^&*()?]"), "").isNotEmpty() }
+                .filter { query ->
+                    // Só deixa passar se, após remover símbolos, sobrar algo (letras/números)
+                    query.trim().replace(Regex("[^a-zA-Z0-9]"), "").isNotEmpty()
+                }
                 .distinctUntilChanged()
                 .collect {
                     isEndReached = false
@@ -66,6 +73,10 @@ class HomeViewModel(private var bookshelfRepository: AppRepository) : ViewModel(
 
     fun updateQuery(newQuery: String) {
         _query.value = newQuery
+        if (newQuery.isBlank()) {
+            allBooks.clear()
+            _uistate.value = HomeUiState.Empty
+        }
     }
 
     private fun getBooks(query: String, isNextPage: Boolean) {
@@ -75,7 +86,6 @@ class HomeViewModel(private var bookshelfRepository: AppRepository) : ViewModel(
                 allBooks.clear()
                 _uistate.value = HomeUiState.Loading
             } else {
-                // Se for próxima página, avisa a UI que estamos paginando
                 _uistate.value = HomeUiState.Success(allBooks.toList(), isPaginating = true)
             }
 
@@ -97,7 +107,6 @@ class HomeViewModel(private var bookshelfRepository: AppRepository) : ViewModel(
     }
 
     fun fetchNextPage() {
-        // Evita chamadas se já estivermos carregando, se chegamos no fim ou se deu erro
         val currentState = _uistate.value
         if (currentState is HomeUiState.Success && !currentState.isPaginating && !isEndReached) {
             currentStartIndex += 20
