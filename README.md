@@ -1,4 +1,4 @@
-# 📚 Bookshelf App - Do Codelab ao Nível Sênior
+# 📚 Bookshelf App
 
 O **Bookshelf** é um aplicativo Android moderno para exploração e busca de livros, utilizando a **Google Books API**. Embora tenha nascido de um guia de estudos do Google, este projeto foi evoluído para aplicar as melhores práticas de arquitetura, performance e UX do mercado.
 
